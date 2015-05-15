@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 #
-# File name: pf.pl
+# File name: pfm.pl
 # Date:      2015/05/11 18:11
 # Author:    Kevin Miklavcic
 #
@@ -24,8 +24,8 @@ $pfm->run_on_finish( sub {
 });
 
 foreach (0..5){
-  say "wait_children();";
-  $pfm->wait_children();
+  say "reap_any_children();";
+  $pfm->reap_any_children();
   say "dispatch($_)";
   dispatch($_);
   say "child $_ dispatched";
@@ -33,8 +33,8 @@ foreach (0..5){
   sleep $p_sleep;
   say "iteration done\n\n";
 }
-say "last wait_children()";
-$pfm->wait_children();
+say "last reap_any_children()";
+$pfm->reap_any_children();
 
 say "Wait for all children";
 $pfm->wait_all_children();
@@ -43,7 +43,9 @@ say "Done!";
 
 sub dispatch {
   my $c = shift;
-  $pfm->start and return;
+  $pfm->start; # and return;
+  return if $pfm->is_parent;
+  say "\t\tI'm just a child!" if $pfm->is_child;
   say "\t\tchild $c";
   if($c == 4){
     say "\t\tchild $c sleeping for " . $c_sleep . 's';
@@ -57,9 +59,14 @@ sub dispatch {
 
 __END__
 
-=head1 pf.pl
+=head1 pfm.pl
 
 =head1 DESCRIPTION
+
+In PFM, 'run_on_finish()' hooks are documented to get called only during calls to start() or wait_all_children().
+In long running processes that may not have a steady stream of jobs to 'start()', 
+'run_on_finish()' calls may sit for vast periods of time. Here I've tested a quick solution to reap children regularly
+using the non-blocking call 'wait_children()' not presented in the docs but used by 'start()'.
 
 =head1 USAGE
 
